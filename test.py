@@ -13,10 +13,10 @@ from utils import image_read_cv2,img_save
 from nets.Ufuser import Ufuser
 
 
-path_ir=r"test_img\ir"
-path_vi=r"test_img\vi"
+path_ir=r"../DataSet/VEDAI/Vehicules1024/IR"
+path_vi=r"../DataSet/VEDAI/Vehicules1024/Vis"
 path_save=r"test_result"
-path_model=r"model\EMMA.pth"
+path_model=r"model/EMMA.pth"
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model=Ufuser().to(device)
@@ -40,7 +40,7 @@ with torch.no_grad():
             vi = ((torch.FloatTensor(VI))).to(device)
             data_Fuse=model(ir,vi)
             data_Fuse=(data_Fuse-torch.min(data_Fuse))/(torch.max(data_Fuse)-torch.min(data_Fuse))
-            fused_image = np.squeeze((data_Fuse * 255).cpu().numpy())
+            fused_image = np.squeeze((data_Fuse * 255).cpu().numpy()).astype('uint8')
             img_save(fused_image, imgname.split(sep='.')[0], path_save)
         else:
             # Upper left 

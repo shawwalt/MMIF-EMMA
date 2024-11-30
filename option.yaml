@@ -1,0 +1,49 @@
+use_cuda: true
+gpu: 1
+algorithm: EMMA
+
+dataset:
+  name: MSRS
+  data_dir: ./DataSet/MSRS/train
+  vis_path: ./DataSet/MSRS/train/vi
+  ir_path: ./DataSet/MSRS/train/ir
+  # for test
+  test_dir: ./DataSet/MSRS/test
+  test_vis_path: ./DataSet/MSRS/test/vi
+  test_ir_path: ./DataSet/MSRS/test/ir
+  train_paths: ./MMIF-EMMA/configs/MSRS/train_val_pair_1/train_paths.txt
+  val_paths: ./MMIF-EMMA/configs/MSRS/train_val_pair_1/val_paths.txt
+  test_paths: ./MMIF-EMMA/configs/MSRS/test.txt
+  val_step: 10
+  train_batch_size: 4
+  val_batch_size: 8
+  num_workers: 8
+  num_epochs: 120
+
+train:
+  optimizer:
+    lr: 1e-4
+    type: adam
+    alpha: 0.1
+    weight_decay: 0
+
+  scheduler:
+    step_size: 20
+    gamma: 0.5
+
+  loss:
+    alpha: 0.1
+
+others:
+  transformer:
+    shift_num: 3
+    rotate_num: 3
+    flip_num: 3
+
+  EMMA:
+    pretrained: 
+      Av: MMIF-EMMA/model/Av.pth
+      Ai: MMIF-EMMA/model/Ai.pth
+      # fuser: MMIF-EMMA/model/EMMA.pth
+
+save_path: MMIF-EMMA/output

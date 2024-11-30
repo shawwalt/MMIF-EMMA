@@ -17,6 +17,7 @@ class Restormer_CNN_block(nn.Module):
         x2=self.LocalFeature(x)
         out=self.FFN(torch.cat((x1,x2),1))
         return out
+    
 class GlobalFeatureExtraction(nn.Module):
     def __init__(self,
                  dim,

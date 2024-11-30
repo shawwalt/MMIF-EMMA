@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 import os
-from skimage.io import imsave
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,7 +24,7 @@ def image_read_cv2(path, mode='RGB'):
 def img_save(image,imagename,savepath):
     if not os.path.exists(savepath):
         os.makedirs(savepath)
-    imsave(os.path.join(savepath, "{}.png".format(imagename)), image)
+    #  imsave(os.path.join(savepath, "{}.png".format(imagename)), image)
 
 
 class loss_fusion(nn.Module):
