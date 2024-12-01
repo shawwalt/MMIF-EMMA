@@ -1,6 +1,7 @@
 use_cuda: true
 gpu: 1
 algorithm: EMMA
+visualization_path: ./MMIF-EMMA/visualization/MSRS
 
 dataset:
   name: MSRS
@@ -44,6 +45,6 @@ others:
     pretrained: 
       Av: MMIF-EMMA/model/Av.pth
       Ai: MMIF-EMMA/model/Ai.pth
-      # fuser: MMIF-EMMA/model/EMMA.pth
+      # fuser: /home/Shawalt/Demos/ImageFusion/MMIF-EMMA/output/EMMA_<2024-11-30>-<23:06:12>/fuser.pth
 
 save_path: MMIF-EMMA/output

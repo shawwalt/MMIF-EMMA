@@ -11,6 +11,7 @@ sys.path.append(os.getcwd())
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import cv2
 from dataprocessing.dataset import *
 from metrics.Evaluator import Evaluator
 import yaml
@@ -72,10 +73,12 @@ class MMIFExpSolver:
 class EMMAExpSolver(MMIFExpSolver):
     def __init__(self, config_path):
         super(EMMAExpSolver, self).__init__(config_path)
+        self.set_outstream() # 设置命令行输出路径
         self.fuser = Ufuser().to(self.device)
         self.F2Vmodel = UNet5().to(self.device) 
         self.F2Imodel = UNet5().to(self.device)
 
+        self.visulization_path = self.config['visualization_path']
         shift_num=self.config['others']['transformer']['shift_num']
         rotate_num=self.config['others']['transformer']['rotate_num']
         flip_num=self.config['others']['transformer']['flip_num']
@@ -83,6 +86,16 @@ class EMMAExpSolver(MMIFExpSolver):
 
         self._initialize_model()
         self._initialize_train_setting()
+
+    def set_outstream(self):
+        # 打开文件
+        self.start_date = time.strftime("<%Y-%m-%d>-<%H:%M:%S>", time.localtime(time.time())) # 训练开始时间
+        self.save_root = os.path.join(self.config['save_path'], self.config['algorithm'] + '_' + self.start_date)
+        os.mkdir(os.path.join('.', self.save_root))
+        self.f = open(os.path.join(self.save_root, f'log_{self.start_date}.txt'), 'w')
+        # 将标准输出重定向到文件
+        sys.stdout = self.f
+        sys.stderr = self.f
 
     def _initialize_model(self):
         if "fuser" in self.config["others"]["EMMA"]['pretrained']:
@@ -124,6 +137,7 @@ class EMMAExpSolver(MMIFExpSolver):
                 Ft_caret= self.fuser(restore_ir, restore_vi) # Ft_caret
                 self.optimizer.zero_grad()
                 loss_total=self.loss(self.F2Vmodel(F),data_VIS)+self.loss(self.F2Imodel(F),data_IR)+self.alpha*self.loss(Ft,Ft_caret)
+                # loss_total=self.loss(self.F2Vmodel(F),data_VIS)+self.loss(self.F2Imodel(F),data_IR) # w/o Equivariant Loss
                 loss_total.backward()
                 self.optimizer.step()
                 process_bar.update(data_VIS.shape[0])
@@ -136,6 +150,7 @@ class EMMAExpSolver(MMIFExpSolver):
 
             if (epoch+1) % self.validate_step == 0:
                 self.validate()
+                self.fuser.train() # return to train mode
     
     def validate(self):
         self.fuser.eval()
@@ -195,7 +210,7 @@ class EMMAExpSolver(MMIFExpSolver):
                                         , Evaluator.SF(fi), Evaluator.MI(fi, i, v)
                                         , Evaluator.SCD(fi, i, v), Evaluator.VIFF(fi, i, v)
                                         , Evaluator.Qabf(fi, i, v), Evaluator.SSIM(fi, i, v, data_range=data_range)])
-        metric_result /= len(self.val_dataset)
+        metric_result /= len(self.test_dataset)
         print('\n')
         print("\t\t EN\t SD\t SF\t MI\t SCD\t VIF\t Qabf\t SSIM\n")
         print(self.algorithm+'\t'+str(np.round(metric_result[0], 2))+'\t'
@@ -209,15 +224,29 @@ class EMMAExpSolver(MMIFExpSolver):
             )
         print("="*80)
 
+    def visulization(self):
+        assert self.visulization_path is not None
+        self.fuser.eval()
+        vi_paths = sorted(os.listdir(self.vis_dir), key=sorted_key)
+        ir_paths = sorted(os.listdir(self.ir_dir), key=sorted_key)
+        for vi, ir in zip(vi_paths, ir_paths):
+            vi_image = transform_val(cv2.imread(os.path.join(self.vis_dir, vi), cv2.IMREAD_GRAYSCALE))
+            ir_image = transform_val(cv2.imread(os.path.join(self.vis_dir, ir), cv2.IMREAD_GRAYSCALE))
+            fuse_image = self.fuser(ir_image, vi_image)
+            vi_ycrcb = cv2.imread(os.path.join(self.vis_dir, vi), cv2.COLOR_BGR2YCrCb)
+            vi_ycrcb[0] = (fuse_image * 255).astype('uint8')
+            vi_image = cv2.cvtColor(vi_ycrcb, cv2.COLOR_YCR_CB2RGB)
+            cv2.imwrite(self.visulization_path + vi, vi_image)
+            print(f'img out {vi} in dir {self.visulization_path}')
+
+
     def save_checkpoint(self): # 保存训练记录
-        date_string = time.strftime("<%Y-%m-%d>-<%H:%M:%S>", time.localtime(time.time()))
-        save_root = os.path.join(self.config['save_path'], self.config['algorithm'] + '_' + date_string)
-        os.mkdir(os.path.join('.', save_root))
-        torch.save(self.fuser.state_dict(),os.path.join(save_root, 'fuser.pth'))
-        torch.save(self.F2Imodel.state_dict(), os.path.join(save_root, 'Ai.pth'))
-        torch.save(self.F2Vmodel.state_dict(), os.path.join(save_root, 'Av.pth'))
-        with open(os.path.join(save_root, 'option.yaml'), 'w') as file:
+        torch.save(self.fuser.state_dict(),os.path.join(self.save_root, 'fuser.pth'))
+        torch.save(self.F2Imodel.state_dict(), os.path.join(self.save_root, 'Ai.pth'))
+        torch.save(self.F2Vmodel.state_dict(), os.path.join(self.save_root, 'Av.pth'))
+        with open(os.path.join(self.save_root, 'option.yaml'), 'w') as file:
             yaml.safe_dump(self.config, file)
+        print("checkpoint saved in " + self.save_root)
             
 if __name__ == "__main__":
     solver = EMMAExpSolver("./MMIF-EMMA/option.yaml")

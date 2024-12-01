@@ -59,7 +59,7 @@ class MMIFDataSet(Dataset):
 if __name__ == "__main__":
     vi, ir = "/home/Shawalt/Demos/ImageFusion/DataSet/MSRS/train/vi", "/home/Shawalt/Demos/ImageFusion/DataSet/MSRS/train/ir"
     file_path = './MMIF-EMMA/configs/MSRS/train_val_pair_1/train_paths.txt'
-    data = MMIFDataSet(vi, ir, transform=transform, from_file=True, file_path=file_path)
+    data = MMIFDataSet(vi, ir, transform=transform_train, from_file=True, file_path=file_path)
     train_loader = DataLoader(data, batch_size=16, shuffle=True, num_workers=8)
     for batch in train_loader:
         print(batch)
